@@ -1,19 +1,47 @@
-import { set } from "mongoose";
-import React, { useEffect, useState } from "react";
-import QRCode from "react-qr-code";
-import { v4 as uuidv4 } from "uuid";
+import React, { useState, useEffect } from "react";
+import { QRCode } from "react-qr-code";
+import { useNavigate } from "react-router-dom";
 
 const QRGenerator = () => {
   const [qrCode, setQrCode] = useState("");
   const [seconds, setSeconds] = useState(0);
   const [cooldownActive, setCooldownActive] = useState(false);
+  const [scanResult, setScanResult] = useState("");
+  const [userStatus, setUserStatus] = useState("outside");
+  const navigate = useNavigate();
+  const userId = localStorage.getItem("userId");
+
+  useEffect(() => {
+    console.log("User status updated:", userStatus);
+  }, [userStatus]);
+
+  useEffect(() => {
+    const fetchUserStatus = async () => {
+      if (!userId) {
+        console.error("User ID is not defined");
+        return;
+      }
+
+      try {
+        const response = await fetch(
+          `http://localhost:3000/api/user-status/${userId}`
+        );
+        const result = await response.json();
+        if (result.success) {
+          setUserStatus(result.status);
+        }
+      } catch (error) {
+        console.error("Fetch error:", error);
+      }
+    };
+
+    fetchUserStatus();
+  }, [userId]);
 
   const generateQRCode = async () => {
-    const userId = uuidv4(); // Identificador de usuario (cambiar por el de la DB)
-    const token = Math.random().toString(36).substring(2); // Token de usuario (cambiar por JWT)
-    const timeStamp = new Date().toISOString(); // Fecha y hora de creación del QR
-    const validationString = "Este string fue hecho de prueba"; // Cadena de validación
-
+    const token = Math.random().toString(36).substring(2);
+    const timeStamp = new Date().toISOString();
+    const validationString = "Este string fue hecho de prueba";
     const qrData = JSON.stringify({
       userId,
       token,
@@ -26,10 +54,8 @@ const QRGenerator = () => {
     try {
       const response = await fetch("http://localhost:3000/api/save-qr", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ qrCode: qrData }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ qrCode: qrData, userId }),
       });
 
       const result = await response.json();
@@ -48,7 +74,35 @@ const QRGenerator = () => {
 
     setTimeout(() => {
       setQrCode("");
+      setScanResult("");
     }, 20000);
+  };
+
+  const scanQRCode = async () => {
+    if (!qrCode) {
+      return;
+    }
+
+    try {
+      const response = await fetch("http://localhost:3000/api/scan-qr", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ qrCode, userId }),
+      });
+
+      const result = await response.json();
+      console.log("Api response:", result);
+
+      if (result.success) {
+        setScanResult(result.message);
+        setUserStatus(result.userStatus);
+      } else {
+        setScanResult(`Error: ${result.message}`);
+      }
+    } catch (err) {
+      console.error("Fetch error:", err);
+      setScanResult("Error scanning QR Code");
+    }
   };
 
   useEffect(() => {
@@ -68,14 +122,31 @@ const QRGenerator = () => {
     return () => clearInterval(interval);
   }, [cooldownActive, seconds]);
 
+  const handleLogout = () => {
+    localStorage.removeItem("userToken");
+    localStorage.removeItem("userId");
+    navigate("/");
+  };
+
   return (
     <div>
-      {qrCode && <QRCode value={qrCode} />}
-      <button onClick={generateQRCode} disabled={cooldownActive}>
-        {cooldownActive
-          ? `Espera ${seconds} segundos para generar otro codigo`
-          : "Generar Código QR"}
-      </button>
+      <h3>User is currently: {userStatus}</h3>
+      <div>
+        <div>{qrCode && <QRCode value={qrCode} />}</div>
+        <button onClick={generateQRCode} disabled={cooldownActive}>
+          {cooldownActive
+            ? `Espera ${seconds} segundos para generar otro código`
+            : "Generar Código QR"}
+        </button>
+      </div>
+
+      <div>
+        <button onClick={scanQRCode} disabled={!qrCode}>
+          Escanear Código QR
+        </button>
+        {scanResult && <p>{scanResult}</p>}
+        <button onClick={handleLogout}>Logout</button>
+      </div>
     </div>
   );
 };

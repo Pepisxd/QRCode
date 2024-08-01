@@ -1,17 +1,32 @@
-import { useState } from "react";
 import "./App.css";
-import QRCode from "react-qr-code";
-import { v4 as uuidv4 } from "uuid";
+import {
+  BrowserRouter as Router,
+  Route,
+  Routes,
+  Navigate,
+} from "react-router-dom";
+import { useState } from "react";
+import QRGenerator from "./QRGenerator";
+import Login from "./Login";
+import Register from "./Register";
 
 function App() {
-  const [count, setCount] = useState(0);
+  const [userId, setUserId] = useState("");
 
   return (
-    <>
-      <div>
-        <QRCode value="www.google.com" />
-      </div>
-    </>
+    <Router>
+      <Routes>
+        <Route path="/" element={<Login setUserId={setUserId} />} />
+        <Route path="/register" element={<Register />} />
+        <Route path="/qr" element={<QRGenerator userId={userId} />} />
+        <Route
+          path="/qr"
+          element={
+            userId ? <QRGenerator userId={userId} /> : <Navigate to="/" />
+          }
+        />
+      </Routes>
+    </Router>
   );
 }
 
