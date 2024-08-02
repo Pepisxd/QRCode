@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { QRCode } from "react-qr-code";
+import QRCode from "react-qr-code";
 import { useNavigate } from "react-router-dom";
 
 const QRGenerator = () => {
@@ -10,10 +10,6 @@ const QRGenerator = () => {
   const [userStatus, setUserStatus] = useState("outside");
   const navigate = useNavigate();
   const userId = localStorage.getItem("userId");
-
-  useEffect(() => {
-    console.log("User status updated:", userStatus);
-  }, [userStatus]);
 
   useEffect(() => {
     const fetchUserStatus = async () => {
@@ -41,12 +37,12 @@ const QRGenerator = () => {
   const generateQRCode = async () => {
     const token = Math.random().toString(36).substring(2);
     const timeStamp = new Date().toISOString();
-    const validationString = "Este string fue hecho de prueba";
+    const action = userStatus === "inside" ? "exit" : "entry";
     const qrData = JSON.stringify({
       userId,
       token,
       timeStamp,
-      validationString,
+      action,
     });
 
     setQrCode(qrData);
@@ -55,7 +51,7 @@ const QRGenerator = () => {
       const response = await fetch("http://localhost:3000/api/save-qr", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ qrCode: qrData, userId }),
+        body: JSON.stringify({ qrCode: qrData, userId, action }),
       });
 
       const result = await response.json();
@@ -91,7 +87,6 @@ const QRGenerator = () => {
       });
 
       const result = await response.json();
-      console.log("Api response:", result);
 
       if (result.success) {
         setScanResult(result.message);

@@ -33,6 +33,7 @@ const qrCodeSchema = new mongoose.Schema({
   data: String,
   userId: String,
   used: { type: Boolean, default: false },
+  action: { type: String, enum: ["entry", "exit"], required: true },
 });
 
 const QRCodeModel = mongoose.model("QRCode", qrCodeSchema);
@@ -58,15 +59,17 @@ const UserModel = mongoose.model("User", userSchema);
 module.exports = UserModel;
 
 app.post("/api/save-qr", async (req, res) => {
-  const { qrCode, userId } = req.body;
+  const { qrCode, userId, action } = req.body;
 
-  if (!userId) {
-    return res.status(400).json({ success: false, message: "Missing userId" });
+  if (!userId || !action) {
+    return res
+      .status(400)
+      .json({ success: false, message: "Missing userId or action" });
   }
 
   const hash = crypto.createHash("md5").update(qrCode).digest("hex");
 
-  const newQRCode = new QRCodeModel({ data: hash, userId });
+  const newQRCode = new QRCodeModel({ data: hash, userId, action });
 
   try {
     const savedQRCode = await newQRCode.save();
@@ -145,12 +148,11 @@ app.post("/api/scan-qr", async (req, res) => {
         .json({ success: false, message: "User not found" });
     }
 
-    const action = user.status ? "exit" : "entry"; // Determina la acción
-    user.status = !user.status;
+    const action = qr.action;
+    user.status = action === "entry" ? true : false;
     await user.save();
 
     qr.used = true;
-    qr.action = action; // Guarda la acción
     await qr.save();
 
     res.status(200).json({
