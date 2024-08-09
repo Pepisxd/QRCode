@@ -1,4 +1,4 @@
-import "./App.css";
+import "./styles/App.css";
 import {
   BrowserRouter as Router,
   Route,
@@ -6,9 +6,10 @@ import {
   Navigate,
 } from "react-router-dom";
 import { useState } from "react";
-import QRGenerator from "./QRGenerator";
-import Login from "./Login";
-import Register from "./Register";
+import QRGenerator from "./pages/QRGenerator";
+import Login from "./pages/Login";
+import Register from "./pages/Register";
+
 
 function App() {
   const [userId, setUserId] = useState("");
