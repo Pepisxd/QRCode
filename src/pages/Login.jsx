@@ -1,11 +1,19 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
-const Login = () => {
+const Login = ({ setUserId }) => {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState("");
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const userId = localStorage.getItem("userId");
+    if (userId) {
+      setUserId(userId);
+      navigate("/qr");
+    }
+  }, [navigate, setUserId]);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -28,6 +36,7 @@ const Login = () => {
       if (result.success) {
         localStorage.setItem("userToken", result.token);
         localStorage.setItem("userId", result.userId);
+        setUserId(result.userId);
         navigate("/qr");
       } else {
         setMessage(result.message);
@@ -66,4 +75,4 @@ const Login = () => {
   );
 };
 
-export default Login;
+export default Login;
